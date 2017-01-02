@@ -177,37 +177,6 @@ case "$num" in
 	12 | 13 )  cp /var/www/${MIRROR_NAME}/more_configs/custom_func_youtube.py /var/www/${MIRROR_NAME}/custom_func.py;;
 esac
 
-#certbot installation, git clone installation failed
-#refer to https://github.com/vimagick/dockerfiles/tree/master/certbot
-if [ ! -f "/usr/local/bin/letsencrypt" ]; then
-	apt-get install -y python-pip python-dev libssl-dev dialog libffi-dev
-	/usr/bin/pip install -U pip
-	/usr/bin/pip install -U setuptools
-	/usr/bin/pip install -U letsencrypt
-fi
-service apache2 stop
-/usr/local/bin/letsencrypt certonly -t --agree-tos --standalone -m your@gmail.com -d ${DOMAIN}
-
-#SSL certification weekly renew script
-if [ ! -f "/etc/cron.weekly/zmirror-letsencrypt-renew.sh" ]; then
-	cat > /etc/cron.weekly/zmirror-letsencrypt-renew.sh<<-EOF
-	#!/bin/bash
-	cd /etc/certbot
-	/usr/local/bin/letsencrypt renew -n --agree-tos --standalone --pre-hook "/usr/sbin/service apache2 stop" --post-hook "/usr/sbin/service apache2 start"
-	exit 0
-	EOF
-	chmod a+x /etc/cron.weekly/zmirror-letsencrypt-renew.sh
-fi
-
-cp /etc/apache2/sites-enabled/apache2-https.conf.sample /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{mirror_name}}/${MIRROR_NAME}/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{domain}}/${DOMAIN}/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{path_to_wsgi_py}}/\/var\/www\/${MIRROR_NAME}\/wsgi.py/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{this_mirror_folder}}/\/var\/www\/${MIRROR_NAME}/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{cert_file}}/\/etc\/letsencrypt\/live\/${DOMAIN}\/cert.pem/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{private_key_file}}/\/etc\/letsencrypt\/live\/${DOMAIN}\/privkey.pem/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-sed -i "s/{{cert_chain_file}}/\/etc\/letsencrypt\/live\/${DOMAIN}\/chain.pem/g" /etc/apache2/sites-enabled/zmirror-${MIRROR_NAME}-https.conf
-
 if [ "${MIRROR_NAME}" != "${NAME}" ]; then
 	echo "Please manually edit the following file, then start the apache2 by \"service apache2 start\""
 	echo "/var/www/${MIRROR_NAME}/config.py"
